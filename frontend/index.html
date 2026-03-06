@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8"><title>Pro User Manager</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { padding: 10px; border-radius: 5px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div style="max-width: 600px; margin: auto;">
+        <h1>User Directory</h1>
+        <div id="users"></div>
+        <h3>Add User</h3>
+        <form id="f" class="card">
+            <input name="name" placeholder="Name" required><input name="email" placeholder="Email" required><input type="file" name="photo" required>
+            <button type="submit" style="background:#2563eb; color:white; width:100%;">Add User</button>
+        </form>
+    </div>
+
+    <div id="modal" style="display:none; position:fixed; top:20%; left:30%; background:white; padding:20px; border-radius:10px; border:1px solid #ccc;">
+        <h3>Edit User</h3>
+        <form id="ef">
+            <input type="hidden" id="eid"><input id="en" name="name"><input id="ee" name="email"><input type="file" name="photo">
+            <button type="submit">Update</button>
+            <button type="button" onclick="document.getElementById('modal').style.display='none'">Cancel</button>
+        </form>
+    </div>
+
+    <script>
+        const API = `http://${window.location.hostname}:8080`;
+        document.getElementById("f").onsubmit = async(e) => { e.preventDefault(); await fetch(`${API}/users`, {method:"POST", body:new FormData(e.target)}); location.reload(); };
+        async function load() {
+            const d = await(await fetch(`${API}/users`)).json();
+            document.getElementById("users").innerHTML = d.map(u => `<div class="card"><strong>${u.name}</strong><br>${u.email}<br><button onclick="openM(${u.id},'${u.name}','${u.email}')">Edit</button></div>`).join('');
+        }
+        function openM(id, n, e) { document.getElementById('modal').style.display='block'; document.getElementById('eid').value=id; document.getElementById('en').value=n; document.getElementById('ee').value=e; }
+        document.getElementById("ef").onsubmit = async(e) => {
+            e.preventDefault(); const id = document.getElementById('eid').value;
+            await fetch(`${API}/users/${id}`, {method:"PUT", body:new FormData(e.target)}); location.reload();
+        };
+        load();
+    </script>
+</body>
+</html>
