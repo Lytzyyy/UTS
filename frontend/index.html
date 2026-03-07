@@ -1,47 +1,100 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang ="en">
 <head>
-    <meta charset="UTF-8"><title>Pro User Manager</title>
+    <meta charset ="UTF-8">
+    <title>CRUD System</title>
+    <link href ="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { padding: 10px; border-radius: 5px; border: none; cursor: pointer; }
+        body { background: #f8f9fa; padding: 20px; }
+        .user-card { margin-bottom: 20px; border: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .profile-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; }
     </style>
 </head>
 <body>
-    <div style="max-width: 600px; margin: auto;">
-        <h1>User Directory</h1>
-        <div id="users"></div>
-        <h3>Add User</h3>
-        <form id="f" class="card">
-            <input name="name" placeholder="Name" required><input name="email" placeholder="Email" required><input type="file" name="photo" required>
-            <button type="submit" style="background:#2563eb; color:white; width:100%;">Add User</button>
+<div class ="container">
+    <h2 class ="text-center mb-4">User Management System</h2>
+    
+    <div class ="card p-4 mb-4">
+        <form id ="userForm" class ="row g-3">
+            <div class ="col-md-4"><input type ="text" id ="name" class ="form-control" placeholder="Nama" required></div>
+            <div class ="col-md-4"><input type ="email" id ="email" class ="form-control" placeholder="Email" required></div>
+            <div class ="col-md-3"><input type ="file" id ="photo" class ="form-control" required></div>
+            <div class ="col-md-1"><button type ="submit" class ="btn btn-primary w-100">Add</button></div>
         </form>
     </div>
 
-    <div id="modal" style="display:none; position:fixed; top:20%; left:30%; background:white; padding:20px; border-radius:10px; border:1px solid #ccc;">
-        <h3>Edit User</h3>
-        <form id="ef">
-            <input type="hidden" id="eid"><input id="en" name="name"><input id="ee" name="email"><input type="file" name="photo">
-            <button type="submit">Update</button>
-            <button type="button" onclick="document.getElementById('modal').style.display='none'">Cancel</button>
-        </form>
-    </div>
+    <div id ="userList" class ="row"></div>
+</div>
 
-    <script>
-        const API = `http://${window.location.hostname}:8080`;
-        document.getElementById("f").onsubmit = async(e) => { e.preventDefault(); await fetch(`${API}/users`, {method:"POST", body:new FormData(e.target)}); location.reload(); };
-        async function load() {
-            const d = await(await fetch(`${API}/users`)).json();
-            document.getElementById("users").innerHTML = d.map(u => `<div class="card"><strong>${u.name}</strong><br>${u.email}<br><button onclick="openM(${u.id},'${u.name}','${u.email}')">Edit</button></div>`).join('');
-        }
-        function openM(id, n, e) { document.getElementById('modal').style.display='block'; document.getElementById('eid').value=id; document.getElementById('en').value=n; document.getElementById('ee').value=e; }
-        document.getElementById("ef").onsubmit = async(e) => {
-            e.preventDefault(); const id = document.getElementById('eid').value;
-            await fetch(`${API}/users/${id}`, {method:"PUT", body:new FormData(e.target)}); location.reload();
-        };
-        load();
-    </script>
+<div class ="modal fade" id ="editModal" tabindex ="-1">
+    <div class ="modal-dialog">
+        <div class ="modal-content">
+            <form id ="editForm" class ="modal-body">
+                <input type ="hidden" id ="editId">
+                <div class ="mb-3"><label>Nama</label><input type ="text" id ="editName" class ="form-control"></div>
+                <div class ="mb-3"><label>Email</label><input type ="email" id ="editEmail" class ="form-control"></div>
+                <div class ="mb-3"><label>Ganti Foto (Opsional)</label><input type ="file" id ="editPhoto" class ="form-control"></div>
+                <button type ="submit" class ="btn btn-success w-100">Simpan Perubahan</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src ="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API_URL = "http://10.225.237.228:8080/users"; // Port 8080 fiks
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+
+    async function fetchUsers() {
+        const res = await fetch(API_URL);
+        const users = await res.json();
+        document.getElementById('userList').innerHTML = users.map(u => `
+            <div class ="col-md-6">
+                <div class ="card user-card p-3">
+                    <div class ="d-flex align-items-center">
+                        <img src ="${u.photo_url}" class ="profile-img me-3">
+                        <div class ="flex-grow-1"><strong>${u.name}</strong><br><small>${u.email}</small></div>
+                        <button onclick ="openEdit(${u.id},'${u.name}','${u.email}')" class ="btn btn-sm btn-warning me-2">Edit</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('userForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData();
+        fd.append('name', document.getElementById('name').value);
+        fd.append('email', document.getElementById('email').value);
+        fd.append('photo', document.getElementById('photo').files[0]);
+        await fetch(API_URL, { method: 'POST', body: fd });
+        fetchUsers();
+    };
+
+    function openEdit(id, name, email) {
+        document.getElementById('editId').value = id;
+        document.getElementById('editName').value = name;
+        document.getElementById('editEmail').value = email;
+        editModal.show();
+    }
+
+    document.getElementById('editForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editId').value;
+        const fd = new FormData();
+        fd.append('name', document.getElementById('editName').value);
+        fd.append('email', document.getElementById('editEmail').value);
+        if(document.getElementById('editPhoto').files[0]) fd.append('photo', document.getElementById('editPhoto').files[0]);
+        await fetch(`${API_URL}/${id}`, { method: 'PUT', body: fd });
+        editModal.hide();
+        fetchUsers();
+    };
+
+    async function deleteUser(id) {
+        if(confirm('Hapus?')) { await fetch(`${API_URL}/${id}`, { method: 'DELETE' }); fetchUsers(); }
+    }
+
+    fetchUsers();
+</script>
 </body>
 </html>

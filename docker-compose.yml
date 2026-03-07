@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   postgres:
     image: postgres:15
@@ -5,25 +6,62 @@ services:
       POSTGRES_DB: usersdb
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password_kamu
-    volumes: [./pgdata:/var/lib/postgresql/data]
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   minio:
     image: minio/minio
     command: server /data --console-address ":9001"
-    ports: ["9000:9000", "9001:9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    volumes: [./minio_data:/data]
+    volumes:
+      - ./minio_data:/data
+    networks:
+      - app-network
+
+  api:
+    build: ./api
+    ports:
+      - "8080:8080" # Port 8080 untuk DATA USER
+    environment:
+      DB_HOST: postgres
+      DB_NAME: usersdb
+      DB_USER: admin
+      DB_PASSWORD: password_kamu
+      DB_PORT: 5432
+      MINIO_ENDPOINT: 10.225.237.228 # Ganti dengan IP Debian kamu
+      MINIO_PORT: 9000
+      MINIO_BUCKET_NAME: uts
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - app-network
 
   backend:
     build: ./backend
-    ports: ["8080:8080"]
-    environment:
-      DB_HOST: postgres
-    depends_on: [postgres, minio]
+    ports:
+      - "8081:8081" # Port 8081 untuk STATUS INTERNAL
+    networks:
+      - app-network
 
   frontend:
     image: nginx:alpine
-    volumes: [./frontend:/usr/share/nginx/html]
-    ports: ["80:80"]
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
